@@ -25,12 +25,11 @@ uploaded_files = st.file_uploader("Upload your files (accepts CSV or Excel): ", 
 
 
 for file in uploaded_files:
-    print(file)
-    file_ext = os.path.splitext(file.name)[-1].lower()
-    print(file_ext)
-    if file_ext == ".csv":
+    file_extension = os.path.splitext(file.name)[-1].lower()
+    
+    if file_extension == ".csv":
         df = pd.read_csv(file)
-    elif file_ext == ".xlsx":
+    elif file_extension == ".xlsx":
         df = pd.read_excel(file)
     else:
         st.error(f"Unsupported file type: {file.extension}")
@@ -60,6 +59,38 @@ for file in uploaded_files:
                 st.write("Missing Values in Numeric Columns Filled with Column Means!")
 
     st.subheader("🎯 Select Columns to Convert")
+    columns = st.multiselect(f"Choose Columns for {file.name}", df.columns, default=df.columns)
+    df = df[columns]  # Filters the DataFrame to the selected columns
+        
+        # Visualization section for uploaded data
+    st.subheader("📊 Data Visualization")
+    if st.checkbox(f"Show Visualization for {file.name}"):
+        st.bar_chart(df.select_dtypes(include='number').iloc[:, :2])  # Plot the first two numeric columns as a bar chart
+        
+        # Section to choose file conversion type (CSV or Excel)
+    st.subheader("🔄 Conversion Options")
+    conversion_type = st.radio(f"Convert {file.name} to:", ["CSV", "Excel"], key=file.name)
+    if st.button(f"Convert {file.name}"):
+        buffer = BytesIO()  # Creates in-memory buffer for file output
+        if conversion_type == "CSV":
+            df.to_csv(buffer, index=False)  # Save DataFrame as CSV in buffer
+            file_name = file.name.replace(file_extension, ".csv")
+            mime_type = "text/csv"
+        elif conversion_type == "Excel":
+            df.to_excel(buffer, index=False, engine='openpyxl')  # Save as Excel using openpyxl
+            file_name = file.name.replace(file_extension, ".xlsx")
+            mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        buffer.seek(0)
+            
+            # Download button for the converted file
+        st.download_button(
+            label=f"⬇️ Download {file.name} as {conversion_type}",
+            data=buffer,
+            file_name=file_name,
+            mime=mime_type
+            )
+
+st.success("🎉 All files processed successfully!")
 
 
 
